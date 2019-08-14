@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+"""
+
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import metrics
+from sklearn import svm
+from sklearn.naive_bayes import MultinomialNB
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_classification
+
+adult = pd.read_csv("//hd.ad.syr.edu/01/ddaed2/Documents/Desktop/707Project/adult1.csv")
+def replace_industry(df):
+    label = df['workclass'].astype('category').cat.categories.tolist()
+    replace_map_comp={ 'workclass' : { k:v for k,v in zip(label, list(range(1,len(label)+1)))}}
+    df_replace = df.copy()
+    df_replace.replace(replace_map_comp, inplace=True)
+    return df_replace
+adult_1 = replace_industry(adult)
+
+#delete all unknown value
+adult1 = adult[adult.workclass != " ?"]
+adult2 = adult1[adult1.occupation != " ?"]
+adult3 = adult2[adult2["native-country"] != " ?"]
+
+adult_dummy1 = pd.get_dummies(adult3["workclass"])
+adult_dummy2 = pd.get_dummies(adult3["marital-status"])
+adult_dummy3 = pd.get_dummies(adult3["occupation"])
+adult_dummy4 = pd.get_dummies(adult3["relationship"])
+adult_dummy5 = pd.get_dummies(adult3["race"])
+adult_dummy6 = pd.get_dummies(adult3["sex"])
+adult_dummy7 = pd.get_dummies(adult3["native-country"])
+
+adult_dummy_all = adult_dummy1.merge(adult_dummy2, left_on=adult_dummy1.index, right_on=adult_dummy2.index, how='outer')
+adult_dummy_all = adult_dummy_all.merge(adult_dummy3, left_on="key_0", right_on=adult_dummy3.index, how='outer')
+adult_dummy_all = adult_dummy_all.merge(adult_dummy4, left_on="key_0", right_on=adult_dummy4.index, how='outer')
+adult_dummy_all = adult_dummy_all.merge(adult_dummy5, left_on="key_0", right_on=adult_dummy5.index, how='outer')
+adult_dummy_all = adult_dummy_all.merge(adult_dummy6, left_on="key_0", right_on=adult_dummy6.index, how='outer')
+adult_dummy_all = adult_dummy_all.merge(adult_dummy7, left_on="key_0", right_on=adult_dummy7.index, how='outer')
+adult_without_dummy = adult3[["age","fnlwgt", "education-num","capital-gain","capital-loss","hours-per-week","income"]]
+adult_dummy_all = adult_dummy_all.merge(adult_without_dummy, left_on="key_0", right_on=adult_without_dummy.index, how='outer')
+
+adult_dummy_all.to_csv("output.csv")
+
+df = pd.read_csv("//hd.ad.syr.edu/01/ddaed2/Documents/Desktop/707Project/output.csv")
+train_data = df.iloc[0:round(0.6*len(df)),2:]
+validation_data = df.iloc[round(0.6*len(df)):round(0.9*len(df)),2:]
+test_data = df.iloc[round(0.9*len(df)):,2:]
+x_train = train_data.iloc[:,0:88]
+y_train = train_data["income"]
+x_validation = validation_data.iloc[:,0:88]
+y_validation = validation_data["income"]
+x_test = test_data.iloc[:,0:88]
+y_test = test_data["income"]
+
+#random forest
+clf=RandomForestClassifier(n_estimators=100)
+clf.fit(x_train,y_train)
+y_pred1=clf.predict(x_validation)
+print("Accuracy:",metrics.accuracy_score(y_validation, y_pred1))
+#Accuracy: 0.8563377168747928
+
+#SVM
+clf = svm.SVC(kernel='linear')
+clf.fit(x_train, y_train)
+y_pred2 = clf.predict(x_validation)
+print("Accuracy:",metrics.accuracy_score(y_validation, y_pred2))
+
+#NB
+clf = MultinomialNB()
+clf.fit(x_train, y_train)
+y_pred3 = clf.predict(x_validation)
+print("Accuracy:",metrics.accuracy_score(y_validation, y_pred3))
